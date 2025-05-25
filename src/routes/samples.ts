@@ -14,9 +14,18 @@ router.get("/:id", (req, res) => {
 });
 
 router.post("/metadata", (req, res) => {
-  const { sampleId, title, genre, bpm, ipfsCid } = req.body;
+  const { sampleId, title, genre, bpm, ipfsCid } = req.body as Record<string, unknown>;
   if (!sampleId || !ipfsCid) return res.status(400).json({ ok: false, error: "sampleId and ipfsCid required" });
-  // Store metadata for fast search
+  if (typeof title !== "string" || !title.trim()) {
+    return res.status(400).json({ ok: false, error: "title must be a non-empty string" });
+  }
+  if (typeof genre !== "string" || !genre.trim()) {
+    return res.status(400).json({ ok: false, error: "genre must be a non-empty string" });
+  }
+  const bpmNum = typeof bpm === "number" ? bpm : parseInt(String(bpm), 10);
+  if (!Number.isInteger(bpmNum) || bpmNum <= 0) {
+    return res.status(400).json({ ok: false, error: "bpm must be a positive integer" });
+  }
   res.json({ ok: true, data: { sampleId, title, genre, bpm, ipfsCid } });
 });
 
