@@ -16,13 +16,18 @@ export async function getEarningsHistory(address: string) {
   if (!STELLAR_ADDR_RE.test(address)) {
     throw new Error(`Invalid Stellar address: ${address}`);
   }
-  const txs = await server.transactions().forAccount(address).limit(TX_LIMIT).order("desc").call();
-  if (!txs.records) return [];
-  return txs.records.map(tx => ({
-    id:        tx.id,
-    createdAt: tx.created_at,
-    successful: tx.successful,
-  }));
+  try {
+    const txs = await server.transactions().forAccount(address).limit(TX_LIMIT).order("desc").call();
+    if (!txs.records) return [];
+    return txs.records.map(tx => ({
+      id:         tx.id,
+      createdAt:  tx.created_at,
+      successful: tx.successful,
+    }));
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Horizon query failed: ${msg}`);
+  }
 }
 
 export async function getAccountBalance(address: string): Promise<string> {
