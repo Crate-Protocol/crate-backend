@@ -31,7 +31,15 @@ export async function getEarningsHistory(address: string) {
 }
 
 export async function getAccountBalance(address: string): Promise<string> {
-  const account = await server.loadAccount(address);
-  const native  = account.balances.find(b => b.asset_type === "native");
-  return native?.balance ?? "0";
+  if (!STELLAR_ADDR_RE.test(address)) {
+    throw new Error(`Invalid Stellar address: ${address}`);
+  }
+  try {
+    const account = await server.loadAccount(address);
+    const native  = account.balances.find(b => b.asset_type === "native");
+    return native?.balance ?? "0";
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to load account: ${msg}`);
+  }
 }
