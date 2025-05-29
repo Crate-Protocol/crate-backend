@@ -24,7 +24,10 @@ app.use("/api/samples",   samplesRouter);
 app.use("/api/ipfs",      ipfsRouter);
 app.use("/api/analytics", analyticsRouter);
 
-// Global error handler — must be registered after all routes
+app.use((_req: Request, res: Response) => {
+  res.status(404).json({ ok: false, error: "Not found" });
+});
+
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   const msg = err instanceof Error ? err.message : String(err);
   console.error("[error]", msg);
