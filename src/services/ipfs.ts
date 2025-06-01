@@ -9,8 +9,9 @@ export async function uploadToIPFS(buffer: Buffer, filename: string) {
   if (!PINATA_JWT) throw new Error("PINATA_JWT not configured");
   if (!buffer || buffer.length === 0) throw new Error("Cannot upload empty buffer");
 
+  const safeFilename = filename.replace(/[/\\]/g, "_");
   const form = new FormData();
-  form.append("file", buffer, { filename });
+  form.append("file", buffer, { filename: safeFilename });
 
   const res = await axios.post(PINATA_ENDPOINT, form, {
     headers: { Authorization: `Bearer ${PINATA_JWT}`, ...form.getHeaders() },
