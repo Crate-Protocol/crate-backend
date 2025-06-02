@@ -10,7 +10,7 @@ export async function getStats() {
   return { totalSamples: 0, totalVolume: "0", totalProducers: 0 };
 }
 
-const STELLAR_ADDR_RE = /^G[A-Z2-7]{55}$/;
+export const STELLAR_ADDR_RE = /^G[A-Z2-7]{55}$/;
 
 export async function getEarningsHistory(address: string) {
   if (!STELLAR_ADDR_RE.test(address)) {

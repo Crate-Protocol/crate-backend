@@ -1,5 +1,5 @@
 import { Router }        from "express";
-import { getStats, getEarningsHistory } from "../services/stellar";
+import { getStats, getEarningsHistory, STELLAR_ADDR_RE } from "../services/stellar";
 
 const router = Router();
 
@@ -11,8 +11,6 @@ router.get("/stats", async (_req, res) => {
     res.status(500).json({ ok: false, error: String(err instanceof Error ? err.message : err) });
   }
 });
-
-const STELLAR_ADDR_RE = /^G[A-Z2-7]{55}$/;
 
 router.get("/earnings/:address", async (req, res) => {
   const { address } = req.params;
