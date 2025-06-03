@@ -1,5 +1,5 @@
 import { Router }        from "express";
-import { getStats, getEarningsHistory, STELLAR_ADDR_RE } from "../services/stellar";
+import { getStats, getEarningsHistory, getAccountBalance, STELLAR_ADDR_RE } from "../services/stellar";
 
 const router = Router();
 
@@ -20,6 +20,19 @@ router.get("/earnings/:address", async (req, res) => {
   try {
     const history = await getEarningsHistory(address);
     res.json({ ok: true, data: history });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: String(err instanceof Error ? err.message : err) });
+  }
+});
+
+router.get("/balance/:address", async (req, res) => {
+  const { address } = req.params;
+  if (!STELLAR_ADDR_RE.test(address)) {
+    return res.status(400).json({ ok: false, error: "Invalid Stellar address" });
+  }
+  try {
+    const balance = await getAccountBalance(address);
+    res.json({ ok: true, data: { address, balance } });
   } catch (err) {
     res.status(500).json({ ok: false, error: String(err instanceof Error ? err.message : err) });
   }
