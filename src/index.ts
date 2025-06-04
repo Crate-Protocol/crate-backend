@@ -17,7 +17,8 @@ app.use(helmet());
 app.use(limiter);
 app.use(morgan("combined"));
 app.use(corsMiddleware);
-app.use(express.json());
+app.set("trust proxy", 1);
+app.use(express.json({ limit: "1mb" }));
 
 app.get("/health", (_req, res) => res.json({ status: "ok", ts: Date.now() }));
 app.use("/api/samples",   samplesRouter);
