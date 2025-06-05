@@ -35,5 +35,9 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ ok: false, error: msg });
 });
 
-app.listen(PORT, () => console.log(`Crate API running on :${PORT}`));
+const server = app.listen(PORT, () => console.log(`Crate API running on :${PORT}`));
+server.on("error", (err: NodeJS.ErrnoException) => {
+  console.error("[fatal] server error", err.message);
+  process.exit(1);
+});
 export default app;
