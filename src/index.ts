@@ -52,3 +52,5 @@ app.listen(PORT, () => {
 });
 
 export default app;
+
+// 1: feat: scaffold Express + TypeScript project struct
