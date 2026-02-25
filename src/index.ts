@@ -56,3 +56,5 @@ export default app;
 // 1: feat: scaffold Express + TypeScript project struct
 
 // 2: feat: add IPFS upload proxy route with Pinata inte
+
+// 3: feat: implement Stellar Horizon event streaming se
