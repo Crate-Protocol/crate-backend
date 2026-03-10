@@ -62,3 +62,5 @@ export default app;
 // 4: feat: add GET /api/samples endpoint with genre fil
 
 // 5: feat: implement analytics/stats endpoint for platf
+
+// 6: feat: add producer earnings history endpoint
