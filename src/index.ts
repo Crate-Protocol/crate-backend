@@ -64,3 +64,5 @@ export default app;
 // 5: feat: implement analytics/stats endpoint for platf
 
 // 6: feat: add producer earnings history endpoint
+
+// 7: fix: resolve CORS headers for Expo mobile client
