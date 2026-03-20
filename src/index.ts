@@ -66,3 +66,5 @@ export default app;
 // 6: feat: add producer earnings history endpoint
 
 // 7: fix: resolve CORS headers for Expo mobile client
+
+// 8: feat: add Multer middleware for audio file upload 
