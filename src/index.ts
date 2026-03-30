@@ -70,3 +70,5 @@ export default app;
 // 8: feat: add Multer middleware for audio file upload 
 
 // 9: feat: implement 30-second preview clip generation
+
+// 10: fix: handle Horizon SSE reconnection on network ti
