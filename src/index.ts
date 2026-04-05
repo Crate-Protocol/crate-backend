@@ -72,3 +72,5 @@ export default app;
 // 9: feat: implement 30-second preview clip generation
 
 // 10: fix: handle Horizon SSE reconnection on network ti
+
+// 11: feat: add trending samples algorithm by purchase v
