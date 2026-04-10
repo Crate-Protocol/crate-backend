@@ -74,3 +74,5 @@ export default app;
 // 10: fix: handle Horizon SSE reconnection on network ti
 
 // 11: feat: add trending samples algorithm by purchase v
+
+// 12: refactor: extract Stellar service into separate mo
