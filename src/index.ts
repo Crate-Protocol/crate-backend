@@ -78,3 +78,5 @@ export default app;
 // 12: refactor: extract Stellar service into separate mo
 
 // 13: feat: add rate limiting middleware to upload endpo
+
+// 14: fix: sanitize IPFS CID input before proxying to Pi
