@@ -82,3 +82,5 @@ export default app;
 // 14: fix: sanitize IPFS CID input before proxying to Pi
 
 // 15: feat: add Docker multi-stage build for production 
+
+// 16: chore: add health check endpoint at GET /health
