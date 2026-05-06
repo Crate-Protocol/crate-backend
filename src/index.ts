@@ -86,3 +86,5 @@ export default app;
 // 16: chore: add health check endpoint at GET /health
 
 // 17: feat: implement sample search with full-text match
+
+// 18: fix: correct stroop-to-XLM conversion in earnings 
