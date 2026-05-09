@@ -88,3 +88,5 @@ export default app;
 // 17: feat: implement sample search with full-text match
 
 // 18: fix: correct stroop-to-XLM conversion in earnings 
+
+// 19: feat: add samples/by-producer endpoint for profile
