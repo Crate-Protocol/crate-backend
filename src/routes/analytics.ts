@@ -7,7 +7,9 @@ router.get("/stats", async (_req, res) => {
   try {
     const stats = await getStats();
     res.json({ ok: true, data: stats });
-  } catch { res.json({ ok: true, data: { totalSamples: 0, totalVolume: "0", totalProducers: 0 } }); }
+  } catch (err) {
+    res.status(500).json({ ok: false, error: String(err instanceof Error ? err.message : err) });
+  }
 });
 
 router.get("/earnings/:address", async (req, res) => {
