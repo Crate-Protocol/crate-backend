@@ -17,7 +17,7 @@ router.get("/earnings/:address", async (req, res) => {
     const history = await getEarningsHistory(req.params.address);
     res.json({ ok: true, data: history });
   } catch (err) {
-    res.status(500).json({ ok: false, error: (err as Error).message });
+    res.status(500).json({ ok: false, error: String(err instanceof Error ? err.message : err) });
   }
 });
 
