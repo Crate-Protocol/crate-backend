@@ -90,3 +90,5 @@ export default app;
 // 18: fix: correct stroop-to-XLM conversion in earnings 
 
 // 19: feat: add samples/by-producer endpoint for profile
+
+// 20: chore: update README, add .env.example and Dockerf
