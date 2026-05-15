@@ -10,8 +10,14 @@ export async function getStats() {
   return { totalSamples: 0, totalVolume: "0", totalProducers: 0 };
 }
 
+const STELLAR_ADDR_RE = /^G[A-Z2-7]{55}$/;
+
 export async function getEarningsHistory(address: string) {
-  const txs = await server.transactions().forAccount(address).limit(20).order("desc").call();
+  if (!STELLAR_ADDR_RE.test(address)) {
+    throw new Error(`Invalid Stellar address: ${address}`);
+  }
+  const txs = await server.transactions().forAccount(address).limit(TX_LIMIT).order("desc").call();
+  if (!txs.records) return [];
   return txs.records.map(tx => ({
     id:        tx.id,
     createdAt: tx.created_at,
