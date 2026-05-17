@@ -1,5 +1,5 @@
 {
-  "name": "sampled-backend",
+  "name": "crate-backend",
   "version": "0.1.0",
   "type": "module",
   "private": true,

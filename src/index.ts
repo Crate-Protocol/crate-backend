@@ -16,7 +16,7 @@ app.use(express.json({ limit: "10mb" }));
 app.get("/health", (_req, res) => {
   res.json({
     status: "ok",
-    service: "sampled-backend",
+    service: "crate-backend",
     timestamp: new Date().toISOString(),
     network: process.env.STELLAR_NETWORK ?? "testnet",
     contract: process.env.CONTRACT_ID ?? "CA7DGEWWS3VH5J2I4I7FFEB5UHK2MJSYWDKDQKXQM7GDNLI2IRATDTLG",
@@ -41,14 +41,14 @@ app.use(
     res: express.Response,
     _next: express.NextFunction
   ) => {
-    console.error("[sampled-backend]", err);
+    console.error("[crate-backend]", err);
     res.status(500).json({ error: err.message ?? "Internal server error" });
   }
 );
 
 app.listen(PORT, () => {
-  console.log(`[sampled-backend] running on http://localhost:${PORT}`);
-  console.log(`[sampled-backend] network: ${process.env.STELLAR_NETWORK ?? "testnet"}`);
+  console.log(`[crate-backend] running on http://localhost:${PORT}`);
+  console.log(`[crate-backend] network: ${process.env.STELLAR_NETWORK ?? "testnet"}`);
 });
 
 export default app;

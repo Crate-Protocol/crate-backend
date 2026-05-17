@@ -1,6 +1,6 @@
-# sampled-backend
+# crate-backend
 
-Node.js + Express + TypeScript API server for the Sampled marketplace.
+Node.js + Express + TypeScript API server for the Crate marketplace.
 
 ## Stack
 
@@ -49,8 +49,8 @@ npm run dev
 ## Docker
 
 ```bash
-docker build -t sampled-backend .
-docker run -p 3001:3001 --env-file .env sampled-backend
+docker build -t crate-backend .
+docker run -p 3001:3001 --env-file .env crate-backend
 ```
 
 ## Environment Variables

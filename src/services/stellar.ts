@@ -1,7 +1,7 @@
 /**
  * stellar.ts
  * ──────────
- * Horizon queries and event streaming for the Sampled contract.
+ * Horizon queries and event streaming for the Crate contract.
  */
 
 import { Horizon } from "@stellar/stellar-sdk";
