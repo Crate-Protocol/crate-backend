@@ -2,6 +2,16 @@
 
 Node.js + Express + TypeScript API server for the Crate marketplace.
 
+## Currently Building
+
+| Feature | Status |
+|---|---|
+| IPFS upload proxy | Done |
+| Stellar event streaming | Done |
+| Sample metadata indexing | In Progress |
+| PostgreSQL persistence | Planned |
+| WebSocket real-time feed | Planned |
+
 ## Stack
 
 - **Node.js 22** + TypeScript
