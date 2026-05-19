@@ -2,6 +2,7 @@ import "dotenv/config";
 import express, { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { samplesRouter }   from "./routes/samples";
 import { ipfsRouter }      from "./routes/ipfs";
 import { analyticsRouter } from "./routes/analytics";
@@ -9,7 +10,10 @@ import { analyticsRouter } from "./routes/analytics";
 const app  = express();
 const PORT = process.env.PORT ?? 3001;
 
+const limiter = rateLimit({ windowMs: 60_000, max: 100, standardHeaders: true, legacyHeaders: false });
+
 app.use(helmet());
+app.use(limiter);
 app.use(cors({ origin: (process.env.ALLOWED_ORIGINS ?? "http://localhost:5173").split(",") }));
 app.use(express.json());
 
