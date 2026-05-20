@@ -3,6 +3,7 @@ import express, { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import morgan from "morgan";
 import { samplesRouter }   from "./routes/samples";
 import { ipfsRouter }      from "./routes/ipfs";
 import { analyticsRouter } from "./routes/analytics";
@@ -14,6 +15,7 @@ const limiter = rateLimit({ windowMs: 60_000, max: 100, standardHeaders: true, l
 
 app.use(helmet());
 app.use(limiter);
+app.use(morgan("combined"));
 app.use(cors({ origin: (process.env.ALLOWED_ORIGINS ?? "http://localhost:5173").split(",") }));
 app.use(express.json());
 
