@@ -1,6 +1,6 @@
 import "dotenv/config";
 import express, { NextFunction, Request, Response } from "express";
-import cors from "cors";
+import { corsMiddleware } from "./middleware/cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import morgan from "morgan";
@@ -16,7 +16,7 @@ const limiter = rateLimit({ windowMs: 60_000, max: 100, standardHeaders: true, l
 app.use(helmet());
 app.use(limiter);
 app.use(morgan("combined"));
-app.use(cors({ origin: (process.env.ALLOWED_ORIGINS ?? "http://localhost:5173").split(",") }));
+app.use(corsMiddleware);
 app.use(express.json());
 
 app.get("/health", (_req, res) => res.json({ status: "ok", ts: Date.now() }));
