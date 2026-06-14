@@ -6,7 +6,6 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? "http://localhost:5173")
 
 export const corsMiddleware = cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (curl, Postman, mobile)
     if (!origin) return callback(null, true);
     if (ALLOWED_ORIGINS.includes("*") || ALLOWED_ORIGINS.includes(origin)) {
       return callback(null, true);
