@@ -1,4 +1,7 @@
+import pg from "pg";
 import { pool } from "./client.js";
+
+pg.types.setTypeParser(20, (v: string) => parseInt(v, 10));
 
 export interface Sample {
   id: number;
@@ -84,7 +87,7 @@ export async function upsertSampleMetadata(data: UpsertSampleData): Promise<{ ro
        premium_price = EXCLUDED.premium_price,
        exclusive_price = EXCLUDED.exclusive_price,
        is_exclusive = EXCLUDED.is_exclusive
-     RETURNING *`,
+     RETURNING *, (xmax::text = '0') AS was_inserted`,
     [
       data.chain_id,
       data.title,
@@ -99,7 +102,9 @@ export async function upsertSampleMetadata(data: UpsertSampleData): Promise<{ ro
     ],
   );
 
-  return { row: result.rows[0] as Sample, inserted: result.rowCount === 1 };
+  const row = result.rows[0] as Sample & { was_inserted: boolean };
+  const { was_inserted, ...sample } = row;
+  return { row: sample as Sample, inserted: was_inserted };
 }
 
 export async function incrementSales(chainId: number): Promise<void> {
