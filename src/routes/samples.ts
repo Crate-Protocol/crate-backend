@@ -1,35 +1,86 @@
 import { Router } from "express";
+import { z } from "zod";
+import {
+  listSamples,
+  getSampleByChainId,
+  upsertSampleMetadata,
+} from "../db/sampleRepository.js";
+
 const router = Router();
 
-router.get("/", (_req, res) => {
-  res.json({ ok: true, data: [], message: "Sample index from contract events" });
+const listQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+  genre: z.string().optional(),
+  uploader: z.string().optional(),
 });
 
-router.get("/:id", (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id) || id <= 0) {
+const metadataSchema = z.object({
+  sampleId: z.number().int().positive(),
+  ipfsCid: z.string().regex(
+    /^(Qm[1-9A-HJ-NP-Za-km-z]{44}|baf[a-z2-7]{56})$/,
+    "Invalid IPFS CID",
+  ),
+  title: z.string().min(1).max(200),
+  uploader: z.string().length(56, "Invalid Stellar address"),
+  genre: z.string().max(50).optional(),
+  bpm: z.number().int().min(1).max(400).optional(),
+  leasePrice: z.number().int().min(0).optional(),
+  premiumPrice: z.number().int().min(0).optional(),
+  exclusivePrice: z.number().int().min(0).optional(),
+  isExclusive: z.boolean().optional(),
+});
+
+router.get("/", async (req, res) => {
+  const parsed = listQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    return res.status(400).json({ ok: false, error: parsed.error.issues[0].message });
+  }
+  try {
+    const { data, total } = await listSamples(parsed.data);
+    res.json({ ok: true, data, total, limit: parsed.data.limit, offset: parsed.data.offset });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: "Internal server error" });
+  }
+});
+
+router.get("/:id", async (req, res) => {
+  const chainId = parseInt(req.params.id, 10);
+  if (isNaN(chainId) || chainId <= 0) {
     return res.status(400).json({ ok: false, error: "Invalid sample id" });
   }
-  res.json({ ok: true, data: { id, title: "Sample", genre: "Trap" } });
+  try {
+    const sample = await getSampleByChainId(chainId);
+    if (!sample) {
+      return res.status(404).json({ ok: false, error: "Sample not found" });
+    }
+    res.json({ ok: true, data: sample });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: "Internal server error" });
+  }
 });
 
 router.post("/metadata", async (req, res) => {
-  const { sampleId, title, genre, bpm, ipfsCid } = req.body as Record<string, unknown>;
-  if (!sampleId || !ipfsCid) return res.status(400).json({ ok: false, error: "sampleId and ipfsCid required" });
-  if (typeof title !== "string" || !title.trim()) {
-    return res.status(400).json({ ok: false, error: "title must be a non-empty string" });
-  }
-  if (typeof genre !== "string" || !genre.trim()) {
-    return res.status(400).json({ ok: false, error: "genre must be a non-empty string" });
-  }
-  const bpmNum = typeof bpm === "number" ? bpm : parseInt(String(bpm), 10);
-  if (!Number.isInteger(bpmNum) || bpmNum <= 0) {
-    return res.status(400).json({ ok: false, error: "bpm must be a positive integer" });
+  const parsed = metadataSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ ok: false, error: parsed.error.issues[0].message });
   }
   try {
-    res.json({ ok: true, data: { sampleId, title, genre, bpmNum, ipfsCid } });
+    const { row, inserted } = await upsertSampleMetadata({
+      chain_id: parsed.data.sampleId,
+      title: parsed.data.title,
+      ipfs_cid: parsed.data.ipfsCid,
+      uploader: parsed.data.uploader,
+      genre: parsed.data.genre,
+      bpm: parsed.data.bpm,
+      lease_price: parsed.data.leasePrice,
+      premium_price: parsed.data.premiumPrice,
+      exclusive_price: parsed.data.exclusivePrice,
+      is_exclusive: parsed.data.isExclusive,
+    });
+    res.status(inserted ? 201 : 200).json({ ok: true, data: row });
   } catch (err) {
-    res.status(500).json({ ok: false, error: String(err instanceof Error ? err.message : err) });
+    res.status(500).json({ ok: false, error: "Internal server error" });
   }
 });
 
