@@ -1,5 +1,7 @@
 import pg from "pg";
 
+pg.types.setTypeParser(20, (v: string) => BigInt(v));
+
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10,

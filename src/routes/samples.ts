@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { StrKey } from "@stellar/stellar-sdk";
 import {
   listSamples,
   getSampleByChainId,
@@ -16,25 +17,28 @@ const listQuerySchema = z.object({
 });
 
 const metadataSchema = z.object({
-  sampleId: z.number().int().positive(),
+  sampleId: z.coerce.bigint().positive(),
   ipfsCid: z.string().regex(
     /^(Qm[1-9A-HJ-NP-Za-km-z]{44}|baf[a-z2-7]{56})$/,
     "Invalid IPFS CID",
   ),
   title: z.string().min(1).max(200),
-  uploader: z.string().length(56, "Invalid Stellar address"),
+  uploader: z.string().refine(
+    (v) => StrKey.isValidEd25519PublicKey(v),
+    "Invalid Stellar address",
+  ),
   genre: z.string().max(50).optional(),
   bpm: z.number().int().min(1).max(400).optional(),
-  leasePrice: z.number().int().min(0).optional(),
-  premiumPrice: z.number().int().min(0).optional(),
-  exclusivePrice: z.number().int().min(0).optional(),
+  leasePrice: z.coerce.bigint().min(0n).optional(),
+  premiumPrice: z.coerce.bigint().min(0n).optional(),
+  exclusivePrice: z.coerce.bigint().min(0n).optional(),
   isExclusive: z.boolean().optional(),
 });
 
 router.get("/", async (req, res) => {
   const parsed = listQuerySchema.safeParse(req.query);
   if (!parsed.success) {
-    return res.status(400).json({ ok: false, error: parsed.error.issues[0].message });
+    return res.status(400).json({ ok: false, errors: parsed.error.issues.map((i) => i.message) });
   }
   try {
     const { data, total } = await listSamples(parsed.data);
@@ -45,8 +49,8 @@ router.get("/", async (req, res) => {
 });
 
 router.get("/:id", async (req, res) => {
-  const chainId = parseInt(req.params.id, 10);
-  if (isNaN(chainId) || chainId <= 0) {
+  const chainId = BigInt(req.params.id);
+  if (chainId <= 0n) {
     return res.status(400).json({ ok: false, error: "Invalid sample id" });
   }
   try {
@@ -63,7 +67,7 @@ router.get("/:id", async (req, res) => {
 router.post("/metadata", async (req, res) => {
   const parsed = metadataSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ ok: false, error: parsed.error.issues[0].message });
+    return res.status(400).json({ ok: false, errors: parsed.error.issues.map((i) => i.message) });
   }
   try {
     const { row, inserted } = await upsertSampleMetadata({

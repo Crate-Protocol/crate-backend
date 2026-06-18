@@ -1,19 +1,16 @@
-import pg from "pg";
 import { pool } from "./client.js";
-
-pg.types.setTypeParser(20, (v: string) => parseInt(v, 10));
 
 export interface Sample {
   id: number;
-  chain_id: number;
+  chain_id: bigint;
   title: string;
   ipfs_cid: string;
   uploader: string;
   genre: string | null;
   bpm: number | null;
-  lease_price: number | null;
-  premium_price: number | null;
-  exclusive_price: number | null;
+  lease_price: bigint | null;
+  premium_price: bigint | null;
+  exclusive_price: bigint | null;
   is_exclusive: boolean;
   total_sales: number;
   created_at: Date;
@@ -55,21 +52,21 @@ export async function listSamples(opts: ListSamplesOpts): Promise<{ data: Sample
   return { data: dataResult.rows as Sample[], total };
 }
 
-export async function getSampleByChainId(chainId: number): Promise<Sample | null> {
+export async function getSampleByChainId(chainId: bigint): Promise<Sample | null> {
   const result = await pool.query("SELECT * FROM samples WHERE chain_id = $1", [chainId]);
   return result.rows[0] as Sample | undefined ?? null;
 }
 
 export interface UpsertSampleData {
-  chain_id: number;
+  chain_id: bigint;
   title: string;
   ipfs_cid: string;
   uploader: string;
   genre?: string;
   bpm?: number;
-  lease_price?: number;
-  premium_price?: number;
-  exclusive_price?: number;
+  lease_price?: bigint;
+  premium_price?: bigint;
+  exclusive_price?: bigint;
   is_exclusive?: boolean;
 }
 
@@ -80,7 +77,6 @@ export async function upsertSampleMetadata(data: UpsertSampleData): Promise<{ ro
      ON CONFLICT (chain_id) DO UPDATE SET
        title = EXCLUDED.title,
        ipfs_cid = EXCLUDED.ipfs_cid,
-       uploader = EXCLUDED.uploader,
        genre = EXCLUDED.genre,
        bpm = EXCLUDED.bpm,
        lease_price = EXCLUDED.lease_price,
@@ -107,11 +103,11 @@ export async function upsertSampleMetadata(data: UpsertSampleData): Promise<{ ro
   return { row: sample as Sample, inserted: was_inserted };
 }
 
-export async function incrementSales(chainId: number): Promise<void> {
+export async function incrementSales(chainId: bigint): Promise<void> {
   await pool.query("UPDATE samples SET total_sales = total_sales + 1 WHERE chain_id = $1", [chainId]);
 }
 
-export async function deleteSample(chainId: number, uploader: string): Promise<number> {
+export async function deleteSample(chainId: bigint, uploader: string): Promise<number> {
   const result = await pool.query("DELETE FROM samples WHERE chain_id = $1 AND uploader = $2", [chainId, uploader]);
   return result.rowCount ?? 0;
 }
