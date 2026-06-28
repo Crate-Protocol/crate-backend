@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS upload_quotas (
+  account_id VARCHAR(255) PRIMARY KEY,
+  uploads_today INTEGER NOT NULL DEFAULT 0,
+  last_upload_date DATE NOT NULL DEFAULT CURRENT_DATE
+);
