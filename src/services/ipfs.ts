@@ -16,6 +16,7 @@ export async function uploadToIPFS(buffer: Buffer, filename: string) {
   const res = await axios.post(PINATA_ENDPOINT, form, {
     headers: { Authorization: `Bearer ${PINATA_JWT}`, ...form.getHeaders() },
     maxContentLength: Infinity,
+    timeout: 30_000,
   });
 
   const cid = res.data?.IpfsHash as string | undefined;
