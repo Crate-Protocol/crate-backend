@@ -39,12 +39,10 @@ app.use((_req: Request, res: Response) => {
 });
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  const isDev = process.env.NODE_ENV !== "production";
-  const msg = err instanceof Error ? err.message : String(err);
-  console.error("[error]", msg);
+  console.error("[error]", err instanceof Error ? err.stack ?? err.message : err);
   res.status(500).json({
     ok: false,
-    error: isDev ? msg : "Internal server error",
+    error: "Internal server error",
   });
 });
 
