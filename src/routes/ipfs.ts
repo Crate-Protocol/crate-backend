@@ -2,6 +2,9 @@ import { Router } from "express";
 import multer from "multer";
 import { uploadToIPFS } from "../services/ipfs.js";
 import { withTimeout } from "../utils/timeout.js";
+import { requireProducerAuth } from "../middleware/auth.js";
+import rateLimit from "express-rate-limit";
+import { checkAndIncrementQuota } from "../db/uploadQuotaRepository.js";
 
 const ALLOWED_MIMES = new Set([
   "audio/mpeg",
@@ -29,6 +32,15 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       .json({ ok: false, error: `Unsupported file type: ${req.file.mimetype}` });
   }
   const file = req.file;
+
+  const accountId = (req as any).user?.id;
+  if (accountId) {
+    const withinQuota = await checkAndIncrementQuota(accountId);
+    if (!withinQuota) {
+      return res.status(429).json({ ok: false, error: "Daily upload quota exceeded for this account" });
+    }
+  }
+
   try {
     const result = await withTimeout(
       () => uploadToIPFS(file.buffer, file.originalname),
