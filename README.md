@@ -158,6 +158,21 @@ docker build -t crate-backend .
 docker run -p 3001:3001 --env-file .env crate-backend
 ```
 
+### Event Indexer
+
+A separate long-running worker that polls Soroban `getEvents` for the
+contract's `uploaded`/`licensed` events and persists them to Postgres —
+that's what `total_sales` and `GET /api/analytics/stats` are actually backed
+by, not a live contract call or client-submitted values. Run it as its own
+process, alongside the API rather than inside it:
+
+```bash
+npm run db:migrate       # applies db/migrations/, including the indexer's tables
+npm run dev:indexer      # or: npm run build && npm run start:indexer
+```
+
+See `.env.example` for tuning (poll interval, backfill depth, page size).
+
 ---
 
 ## Project Structure
@@ -165,6 +180,11 @@ docker run -p 3001:3001 --env-file .env crate-backend
 ```
 src/
 ├── index.ts               # Express app — middleware + routes
+├── indexer/                # Standalone Soroban event indexer worker
+│   ├── index.ts           # Entrypoint (npm run dev:indexer / start:indexer)
+│   ├── worker.ts          # Backfill + poll loop
+│   ├── sorobanEvents.ts   # getEvents/getLatestLedger RPC calls
+│   └── eventDecoder.ts    # Raw event → DecodedEvent
 ├── routes/
 │   ├── samples.ts         # Sample CRUD + metadata
 │   ├── ipfs.ts            # Pinata upload proxy
@@ -172,6 +192,9 @@ src/
 ├── services/
 │   ├── stellar.ts         # Horizon queries, account balance, event SSE
 │   └── ipfs.ts            # Pinata file upload service
+├── db/
+│   ├── sampleRepository.ts     # samples table
+│   └── indexerRepository.ts    # contract_events / indexer_cursor / platform_stats
 └── middleware/
     └── cors.ts            # CORS config
 ```
