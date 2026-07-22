@@ -27,6 +27,7 @@
 | Sample metadata indexing | 🔄 In Progress | `feat/metadata-index` |
 | PostgreSQL for persistence | 📋 Planned | — |
 | WebSocket real-time sale feed | 📋 Planned | — |
+| Royalty split config + payout ledger | 🔄 In Progress (schema + config API done, reconciliation blocked on the event indexer, #20) | `feat/royalty-split-and-payout-ledger` |
 
 ---
 
@@ -56,6 +57,10 @@ The Crate backend handles everything the Soroban smart contract doesn't — file
 | `GET` | `/api/samples` | List samples with filters (`?genre=trap&bpm=140`) |
 | `GET` | `/api/samples/:id` | Get single sample metadata |
 | `POST` | `/api/samples/metadata` | Save off-chain metadata after on-chain upload |
+| `POST` | `/api/samples/:id/royalty-splits` | Configure a new royalty split version (uploader-only, auth required) |
+| `GET` | `/api/samples/:id/royalty-splits` | List every split version ever configured for a sample |
+| `GET` | `/api/samples/:id/royalty-splits/current` | Get the split version currently in effect |
+| `GET` | `/api/samples/:id/payouts` | List the payout ledger for a sample |
 
 ### IPFS
 
