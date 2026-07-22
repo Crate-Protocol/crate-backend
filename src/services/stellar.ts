@@ -1,13 +1,22 @@
 import { Horizon } from "@stellar/stellar-sdk";
+import { getPlatformStats } from "../db/indexerRepository.js";
 
 const HORIZON_URL   = process.env.STELLAR_HORIZON_URL ?? "https://horizon-testnet.stellar.org";
 const TX_LIMIT      = Math.min(200, Math.max(1, parseInt(process.env.EARNINGS_TX_LIMIT ?? "20", 10)));
+const CONTRACT_ID   = process.env.CONTRACT_ID ?? "";
 
 const server = new Horizon.Server(HORIZON_URL, { timeout: 10_000 } as any);
 
 export async function getStats() {
-  // In production: query Soroban RPC get_stats
-  return { totalSamples: 0, totalVolume: "0", totalProducers: 0 };
+  // Backed by platform_stats, kept up to date by the indexer worker
+  // (src/indexer) from real "uploaded"/"licensed" contract events — not a
+  // live contract call, and not client-submitted values.
+  const stats = await getPlatformStats(CONTRACT_ID);
+  return {
+    totalSamples: stats.totalSamples,
+    totalVolume: stats.totalVolume.toString(),
+    totalProducers: stats.totalProducers,
+  };
 }
 
 export const STELLAR_ADDR_RE = /^G[A-Z2-7]{55}$/;
