@@ -8,16 +8,12 @@ vi.mock("../../db/moderationRepository.js", () => ({
   confirmTakedown: vi.fn(),
   dismissFlags: vi.fn(),
 }));
-vi.mock("../../db/sampleRepository.js", () => ({
-  getSampleByChainId: vi.fn(),
-}));
 vi.mock("../../services/ipfs.js", () => ({
   unpinFromIPFS: vi.fn(),
 }));
 
 import { moderationRouter } from "../moderation.js";
 import * as moderationRepo from "../../db/moderationRepository.js";
-import * as sampleRepo from "../../db/sampleRepository.js";
 import * as ipfsService from "../../services/ipfs.js";
 
 function getHandler(path: string, method: "get" | "post") {
@@ -120,7 +116,6 @@ describe("POST /:id/takedown", () => {
   const handler = getHandler("/:id/takedown", "post");
 
   it("409s when the sample can't be found or is already taken down", async () => {
-    vi.mocked(sampleRepo.getSampleByChainId).mockResolvedValue(fakeSample);
     vi.mocked(moderationRepo.confirmTakedown).mockResolvedValue(null);
     const req = { params: { id: "42" }, body: {}, user: { id: ADMIN_ID } } as unknown as Request;
     const res = mockRes();
@@ -128,10 +123,13 @@ describe("POST /:id/takedown", () => {
     expect(res.status).toHaveBeenCalledWith(409);
   });
 
-  it("confirms takedown and unpins the IPFS CID", async () => {
-    vi.mocked(sampleRepo.getSampleByChainId).mockResolvedValue(fakeSample);
+  it("unpins the CID confirmTakedown actually returned, not a separately fetched one", async () => {
+    // A CID that differs from fakeSample's own — proves the unpin call uses
+    // confirmTakedown's UPDATE...RETURNING result, not some other snapshot,
+    // which is what closes the race the reviewer flagged.
+    const liveCid = "QmLiveCidAtTakedownTimeXXXXXXXXXXXXXXXXXXXXXX";
     vi.mocked(moderationRepo.confirmTakedown).mockResolvedValue({
-      sample: { ...fakeSample, moderation_status: "taken_down" },
+      sample: { ...fakeSample, ipfs_cid: liveCid, moderation_status: "taken_down" },
       flagsResolved: 2,
     });
     vi.mocked(ipfsService.unpinFromIPFS).mockResolvedValue(undefined);
@@ -140,14 +138,13 @@ describe("POST /:id/takedown", () => {
     const res = mockRes();
     await handler(req, res);
 
-    expect(ipfsService.unpinFromIPFS).toHaveBeenCalledWith(fakeSample.ipfs_cid);
+    expect(ipfsService.unpinFromIPFS).toHaveBeenCalledWith(liveCid);
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ ok: true, flagsResolved: 2, unpinned: true }),
     );
   });
 
   it("still confirms takedown in the DB even if the unpin call fails", async () => {
-    vi.mocked(sampleRepo.getSampleByChainId).mockResolvedValue(fakeSample);
     vi.mocked(moderationRepo.confirmTakedown).mockResolvedValue({
       sample: { ...fakeSample, moderation_status: "taken_down" },
       flagsResolved: 1,

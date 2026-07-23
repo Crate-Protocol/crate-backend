@@ -10,7 +10,6 @@ import {
   confirmTakedown,
   dismissFlags,
 } from "../db/moderationRepository.js";
-import { getSampleByChainId } from "../db/sampleRepository.js";
 import { unpinFromIPFS } from "../services/ipfs.js";
 
 const router = Router();
@@ -113,23 +112,24 @@ router.post("/:id/takedown", requireAdminAuth, async (req, res) => {
   const reviewedBy = (req as any).user.id as string;
 
   try {
-    const sampleBeforeTakedown = await getSampleByChainId(chainId);
     const result = await confirmTakedown(chainId, { note: parsed.data.note, reviewedBy });
     if (!result) {
       return res.status(409).json({ ok: false, error: "Sample not found or already taken down" });
     }
 
+    // Unpin whatever CID confirmTakedown's UPDATE...RETURNING actually saw at
+    // the moment it flipped the status, not a separately fetched snapshot —
+    // otherwise a metadata update landing in between could unpin a CID that
+    // isn't live anymore.
     let unpinned = true;
-    if (sampleBeforeTakedown) {
-      try {
-        await unpinFromIPFS(sampleBeforeTakedown.ipfs_cid);
-      } catch (err) {
-        unpinned = false;
-        console.error(
-          "[moderation] unpin failed after takedown, retry manually:",
-          err instanceof Error ? err.message : err,
-        );
-      }
+    try {
+      await unpinFromIPFS(result.sample.ipfs_cid);
+    } catch (err) {
+      unpinned = false;
+      console.error(
+        "[moderation] unpin failed after takedown, retry manually:",
+        err instanceof Error ? err.message : err,
+      );
     }
 
     res.json({ ok: true, data: result.sample, flagsResolved: result.flagsResolved, unpinned });
