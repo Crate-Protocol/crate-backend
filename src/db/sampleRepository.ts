@@ -1,5 +1,6 @@
 import { pool } from "./client.js";
 import type { Pool, PoolClient } from "pg";
+import type { ModerationStatus } from "../services/moderationStateMachine.js";
 
 export interface Sample {
   id: number;
@@ -16,6 +17,7 @@ export interface Sample {
   total_sales: number;
   created_at: Date;
   updated_at: Date;
+  moderation_status: ModerationStatus;
 }
 
 export interface ListSamplesOpts {
@@ -26,7 +28,9 @@ export interface ListSamplesOpts {
 }
 
 export async function listSamples(opts: ListSamplesOpts): Promise<{ data: Sample[]; total: number }> {
-  const conditions: string[] = [];
+  // Taken-down samples are excluded from public listing/search, but stay
+  // resolvable via getSampleByChainId so payout/history lookups don't break.
+  const conditions: string[] = ["moderation_status != 'taken_down'"];
   const values: unknown[] = [];
   let idx = 1;
 
