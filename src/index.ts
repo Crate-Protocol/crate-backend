@@ -8,6 +8,7 @@ import { samplesRouter } from "./routes/samples.js";
 import { ipfsRouter } from "./routes/ipfs.js";
 import { analyticsRouter } from "./routes/analytics.js";
 import { royaltiesRouter } from "./routes/royalties.js";
+import { moderationRouter } from "./routes/moderation.js";
 import { pool, checkDbConnection } from "./db/client.js";
 
 const app = express();
@@ -41,6 +42,7 @@ app.use("/api/samples", samplesRouter);
 app.use("/api/samples", royaltiesRouter);
 app.use("/api/ipfs", ipfsRouter);
 app.use("/api/analytics", analyticsRouter);
+app.use("/api/moderation", moderationRouter);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ ok: false, error: "Not found" });
