@@ -1,4 +1,5 @@
 import { pool } from "./client.js";
+import type { Pool, PoolClient } from "pg";
 
 export interface Sample {
   id: number;
@@ -103,8 +104,17 @@ export async function upsertSampleMetadata(data: UpsertSampleData): Promise<{ ro
   return { row: sample as Sample, inserted: was_inserted };
 }
 
-export async function incrementSales(chainId: bigint): Promise<void> {
-  await pool.query("UPDATE samples SET total_sales = total_sales + 1 WHERE chain_id = $1", [chainId]);
+// db defaults to the shared pool, but accepts a PoolClient so a caller
+// running inside its own transaction (the indexer, applying a "licensed"
+// event alongside a contract_events insert and a cursor advance) can pass
+// its client and have this participate in that same transaction instead of
+// committing independently on a separate pooled connection.
+// Returns the number of rows updated, so callers applying on-chain events can
+// tell a genuine sample apart from one whose off-chain metadata was never
+// POSTed to /api/samples/metadata (chainId not found -> 0 rows, silently).
+export async function incrementSales(chainId: bigint, db: Pool | PoolClient = pool): Promise<number> {
+  const result = await db.query("UPDATE samples SET total_sales = total_sales + 1 WHERE chain_id = $1", [chainId]);
+  return result.rowCount ?? 0;
 }
 
 export async function deleteSample(chainId: bigint, uploader: string): Promise<number> {

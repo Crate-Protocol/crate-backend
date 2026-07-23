@@ -27,4 +27,8 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
   CMD wget -qO- http://localhost:3001/health || exit 1
 
+# Default runs the API. The event indexer is a separate long-running process
+# (see README's "Event Indexer" section) and needs its own container running
+# this same image with the command overridden, e.g.:
+#   docker run --env-file .env crate-backend npm run start:indexer
 CMD ["node", "dist/index.js"]
