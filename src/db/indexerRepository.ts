@@ -38,12 +38,15 @@ export interface ApplyResult {
 /**
  * Applies a batch of already-decoded events and advances the cursor to
  * newLastLedger, all in one transaction. Each event insert is
- * ON CONFLICT (ledger, tx_hash, event_index) DO NOTHING, so replaying a
- * range that was already (fully or partially) applied — from a restart, or
- * a retried poll after a mid-batch crash — only applies the side effects
- * (samples.total_sales, platform_stats) for events that weren't already
- * recorded. The cursor only advances if the whole batch commits, so a crash
- * partway through never leaves the cursor ahead of what's actually applied.
+ * ON CONFLICT (ledger, tx_hash, event_index) DO NOTHING RETURNING id, and the
+ * side effects (samples.total_sales, platform_stats) only fire when a row
+ * actually comes back. That's what makes replaying an already-applied range
+ * safe — whether from a single worker's restart, or two workers processing
+ * an overlapping range concurrently: the losing insert's RETURNING is empty,
+ * so it can't double the side effects even though it started from the same
+ * "not applied yet" state as the winner. The cursor only advances if the
+ * whole batch commits, so a crash partway through never leaves it ahead of
+ * what's actually applied.
  */
 export async function applyEventBatchAndAdvanceCursor(
   contractId: string,
@@ -59,36 +62,17 @@ export async function applyEventBatchAndAdvanceCursor(
     await client.query("BEGIN");
 
     for (const event of events) {
-      // Checked with a plain SELECT rather than leaning on INSERT ...
-      // ON CONFLICT DO NOTHING's own row count: within a single worker's
-      // sequential restart-replay (this function's actual concurrency
-      // model — see the note on ensureCursor in worker.ts) there's no
-      // concurrent writer to race against, so a pre-check inside this same
-      // transaction is exact. The INSERT below still carries ON CONFLICT DO
-      // NOTHING regardless, so the row itself can never actually be
-      // duplicated even if that assumption is ever violated.
-      const existing = await client.query(
-        "SELECT 1 FROM contract_events WHERE ledger = $1 AND tx_hash = $2 AND event_index = $3",
-        [event.ledger, event.txHash, event.eventIndex],
-      );
-
-      if ((existing.rowCount ?? 0) > 0) {
-        // Already applied in a previous run — must not re-apply side effects.
-        skipped++;
-        continue;
-      }
-      applied++;
-
       const payload =
         event.eventType === "uploaded"
           ? { uploader: event.uploader }
           : { buyer: event.buyer, price: event.price.toString() };
 
-      await client.query(
+      const inserted = await client.query(
         `INSERT INTO contract_events
            (contract_id, ledger, tx_hash, event_index, event_type, sample_id, payload, ledger_closed_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         ON CONFLICT (ledger, tx_hash, event_index) DO NOTHING`,
+         ON CONFLICT (ledger, tx_hash, event_index) DO NOTHING
+         RETURNING id`,
         [
           event.contractId,
           event.ledger,
@@ -101,8 +85,22 @@ export async function applyEventBatchAndAdvanceCursor(
         ],
       );
 
+      if ((inserted.rowCount ?? 0) === 0) {
+        // Already applied — by this worker or a concurrent one. Must not
+        // re-apply side effects.
+        skipped++;
+        continue;
+      }
+      applied++;
+
       if (event.eventType === "licensed") {
-        await incrementSales(event.sampleId, client);
+        const rowsUpdated = await incrementSales(event.sampleId, client);
+        if (rowsUpdated === 0) {
+          console.warn(
+            `[indexerRepository] licensed event for sample_id ${event.sampleId} has no matching row in samples ` +
+              `(metadata never POSTed to /api/samples/metadata) — total_sales not incremented`,
+          );
+        }
         await client.query(
           `INSERT INTO platform_stats (contract_id, total_volume)
            VALUES ($1, $2)
@@ -114,18 +112,12 @@ export async function applyEventBatchAndAdvanceCursor(
       } else {
         // Mirrors the contract's own Producer(Address) flag: only count a
         // producer toward total_producers the first time we see them upload.
-        const existingProducer = await client.query(
-          "SELECT 1 FROM known_producers WHERE address = $1",
+        // Same RETURNING-gated check as above, for the same concurrency reason.
+        const producerInserted = await client.query(
+          "INSERT INTO known_producers (address) VALUES ($1) ON CONFLICT DO NOTHING RETURNING address",
           [event.uploader],
         );
-        const isNewProducer = (existingProducer.rowCount ?? 0) === 0;
-
-        if (isNewProducer) {
-          await client.query(
-            "INSERT INTO known_producers (address) VALUES ($1) ON CONFLICT DO NOTHING",
-            [event.uploader],
-          );
-        }
+        const isNewProducer = (producerInserted.rowCount ?? 0) > 0;
 
         await client.query(
           `INSERT INTO platform_stats (contract_id, total_samples, total_producers)
