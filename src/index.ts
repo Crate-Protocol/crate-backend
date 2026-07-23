@@ -20,6 +20,12 @@ app.use(limiter);
 app.use(morgan("combined"));
 app.use(corsMiddleware);
 app.set("trust proxy", 1);
+// pg parses BIGINT columns (chain_id, lease_price, ...) into native BigInt,
+// which JSON.stringify can't serialize on its own — every res.json() call
+// on a row with those columns would 500 without this.
+app.set("json replacer", (_key: string, value: unknown) =>
+  typeof value === "bigint" ? value.toString() : value,
+);
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/health", async (_req, res) => {
