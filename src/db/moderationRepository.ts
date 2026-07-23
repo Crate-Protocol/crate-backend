@@ -1,6 +1,5 @@
 import { pool } from "./client.js";
-import type { Sample } from "./sampleRepository.js";
-import type { ModerationStatus } from "../services/moderationStateMachine.js";
+import type { Sample, ModerationStatus } from "./sampleRepository.js";
 
 export interface SampleFlag {
   id: number;

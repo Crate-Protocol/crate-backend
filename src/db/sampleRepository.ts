@@ -1,6 +1,7 @@
 import { pool } from "./client.js";
 import type { Pool, PoolClient } from "pg";
-import type { ModerationStatus } from "../services/moderationStateMachine.js";
+
+export type ModerationStatus = "active" | "flagged" | "under_review" | "taken_down";
 
 export interface Sample {
   id: number;
