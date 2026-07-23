@@ -53,8 +53,8 @@ export async function listSamples(opts: ListSamplesOpts): Promise<{ data: Sample
   return { data: dataResult.rows as Sample[], total };
 }
 
-export async function getSampleByChainId(chainId: bigint): Promise<Sample | null> {
-  const result = await pool.query("SELECT * FROM samples WHERE chain_id = $1", [chainId]);
+export async function getSampleByChainId(chainId: bigint, db: Pool | PoolClient = pool): Promise<Sample | null> {
+  const result = await db.query("SELECT * FROM samples WHERE chain_id = $1", [chainId]);
   return result.rows[0] as Sample | undefined ?? null;
 }
 

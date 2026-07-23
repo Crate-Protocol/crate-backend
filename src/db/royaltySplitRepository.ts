@@ -1,5 +1,6 @@
 import { pool } from "./client.js";
 import { assertValidSplit, type SplitRecipient } from "../services/royaltySplit.js";
+import type { Pool } from "pg";
 
 export interface RoyaltySplitRow {
   version: number;
@@ -77,8 +78,9 @@ export async function listSplitVersions(sampleId: number): Promise<RoyaltySplitR
 export async function getEffectiveSplit(
   sampleId: number,
   atTime: Date,
+  db: Pool = pool,
 ): Promise<{ version: number; recipients: SplitRecipient[] } | null> {
-  const { rows: versionRows } = await pool.query(
+  const { rows: versionRows } = await db.query(
     `SELECT version FROM royalty_splits
      WHERE sample_id = $1 AND effective_from <= $2
      ORDER BY effective_from DESC, version DESC LIMIT 1`,
@@ -87,7 +89,7 @@ export async function getEffectiveSplit(
   if (versionRows.length === 0) return null;
 
   const version: number = versionRows[0].version;
-  const { rows } = await pool.query(
+  const { rows } = await db.query(
     `SELECT recipient, basis_points AS "basisPoints" FROM royalty_splits
      WHERE sample_id = $1 AND version = $2`,
     [sampleId, version],
