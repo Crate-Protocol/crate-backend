@@ -41,11 +41,16 @@ export function getRedis(): Redis | null {
 
 /** Connect to Redis if caching is enabled. Non-blocking if Redis is down. */
 export async function connectRedis(): Promise<void> {
-  if (!redis) return;
+  if (!redis) {
+    if (!CACHE_ENABLED) {
+      console.log("[cache] caching disabled (CACHE_ENABLED=false)");
+    }
+    return;
+  }
   try {
     await redis.connect();
   } catch (err) {
-    console.warn("[cache] Failed to connect to Redis — running without cache:", err);
+    console.warn("[cache] Redis unreachable — API will run without cache:", err);
     redis = null;
   }
 }
