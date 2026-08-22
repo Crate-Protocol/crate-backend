@@ -15,7 +15,7 @@ import { pool, checkDbConnection } from "./db/client.js";
 import { bigIntReplacer } from "./utils/bigint.js";
 import { initWebSocket, getManager, getWss } from "./ws/server.js";
 import { startEventListener, stopEventListener } from "./ws/eventBus.js";
-import { connectRedis, disconnectRedis } from "./cache/redis.js";
+import { connectRedis, disconnectRedis, getRedis } from "./cache/redis.js";
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -34,11 +34,21 @@ app.set("json replacer", bigIntReplacer);
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/health", async (_req, res) => {
+  const redis = getRedis();
+  let redisStatus = "disabled";
+  if (redis) {
+    try {
+      const pong = await redis.ping();
+      redisStatus = pong === "PONG" ? "ok" : "degraded";
+    } catch {
+      redisStatus = "unreachable";
+    }
+  }
   try {
     await checkDbConnection();
-    res.json({ status: "ok", db: "ok", ts: Date.now() });
+    res.json({ status: "ok", db: "ok", redis: redisStatus, ts: Date.now() });
   } catch {
-    res.status(503).json({ status: "degraded", db: "unreachable", ts: Date.now() });
+    res.status(503).json({ status: "degraded", db: "unreachable", redis: redisStatus, ts: Date.now() });
   }
 });
 
