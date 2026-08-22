@@ -1,4 +1,4 @@
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 
 const CACHE_ENABLED = process.env.CACHE_ENABLED !== "false";
 const REDIS_URL = process.env.REDIS_URL ?? "redis://localhost:6379";
@@ -8,7 +8,7 @@ let redis: Redis | null = null;
 if (CACHE_ENABLED) {
   redis = new Redis(REDIS_URL, {
     maxRetriesPerRequest: 3,
-    retryStrategy(times) {
+    retryStrategy(times: number) {
       const delay = Math.min(times * 200, 5000);
       return delay;
     },
@@ -25,7 +25,7 @@ if (CACHE_ENABLED) {
     console.log("[cache] Redis ready");
   });
 
-  redis.on("error", (err) => {
+  redis.on("error", (err: Error) => {
     console.warn("[cache] Redis error — caching disabled for this cycle:", err.message);
   });
 
