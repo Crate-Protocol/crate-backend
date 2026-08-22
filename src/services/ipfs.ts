@@ -1,23 +1,36 @@
 import axios from "axios";
 import FormData from "form-data";
+import type { Readable } from "node:stream";
 
 const PINATA_JWT        = process.env.PINATA_JWT ?? "";
 const PINATA_GATEWAY    = process.env.PINATA_GATEWAY ?? "https://gateway.pinata.cloud";
 const PINATA_ENDPOINT   = process.env.PINATA_ENDPOINT ?? "https://api.pinata.cloud/pinning/pinFileToIPFS";
 const PINATA_UNPIN_BASE = process.env.PINATA_UNPIN_ENDPOINT ?? "https://api.pinata.cloud/pinning/unpin";
 
-export async function uploadToIPFS(buffer: Buffer, filename: string) {
+/**
+ * Upload a file stream to IPFS via Pinata.
+ * Accepts a readable stream instead of a Buffer to avoid OOM on large files.
+ */
+export async function uploadToIPFS(
+  fileStream: Readable,
+  filename: string,
+  contentLength?: number,
+) {
   if (!PINATA_JWT) throw new Error("PINATA_JWT not configured");
-  if (!buffer || buffer.length === 0) throw new Error("Cannot upload empty buffer");
 
   const safeFilename = filename.replace(/[/\\]/g, "_");
   const form = new FormData();
-  form.append("file", buffer, { filename: safeFilename });
+  form.append("file", fileStream, {
+    filename: safeFilename,
+    ...(contentLength ? { knownLength: contentLength } : {}),
+  });
 
   const res = await axios.post(PINATA_ENDPOINT, form, {
     headers: { Authorization: `Bearer ${PINATA_JWT}`, ...form.getHeaders() },
     maxContentLength: Infinity,
-    timeout: 30_000,
+    maxBodyLength: Infinity,
+    // 60s connection timeout, no total timeout (stream can take a while)
+    timeout: 60_000,
   });
 
   const cid = res.data?.IpfsHash as string | undefined;
