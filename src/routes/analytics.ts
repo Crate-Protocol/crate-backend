@@ -3,6 +3,7 @@ import {
   getStats,
   getEarningsHistory,
   getAccountBalance,
+  getSalesByAddress,
   STELLAR_ADDR_RE,
 } from "../services/stellar.js";
 import { withTimeout } from "../utils/timeout.js";
@@ -62,6 +63,29 @@ router.get("/balance/:address", async (req, res) => {
       10_000,
     );
     res.json({ ok: true, data: { address, balance } });
+  } catch (err) {
+    if (err instanceof Error && err.message === "TimeoutError") {
+      return res
+        .status(503)
+        .json({ ok: false, error: "Service unavailable: request timed out" });
+    }
+    res.status(500).json({ ok: false, error: sanitizedError(err) });
+  }
+});
+
+router.get("/sales/:address", async (req, res) => {
+  const { address } = req.params;
+  if (!STELLAR_ADDR_RE.test(address)) {
+    return res
+      .status(400)
+      .json({ ok: false, error: "Invalid Stellar address" });
+  }
+  try {
+    const salesData = await withTimeout(
+      () => getSalesByAddress(address),
+      10_000,
+    );
+    res.json({ ok: true, data: salesData });
   } catch (err) {
     if (err instanceof Error && err.message === "TimeoutError") {
       return res

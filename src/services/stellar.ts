@@ -1,5 +1,6 @@
 import { Horizon } from "@stellar/stellar-sdk";
 import { getPlatformStats } from "../db/indexerRepository.js";
+import { getSalesBySeller, getTotalEarnings } from "../db/salesRepository.js";
 
 const HORIZON_URL   = process.env.STELLAR_HORIZON_URL ?? "https://horizon-testnet.stellar.org";
 const TX_LIMIT      = Math.min(200, Math.max(1, parseInt(process.env.EARNINGS_TX_LIMIT ?? "20", 10)));
@@ -25,18 +26,35 @@ export async function getEarningsHistory(address: string) {
   if (!STELLAR_ADDR_RE.test(address)) {
     throw new Error(`Invalid Stellar address: ${address}`);
   }
-  try {
-    const txs = await server.transactions().forAccount(address).limit(TX_LIMIT).order("desc").call();
-    if (!txs.records) return [];
-    return txs.records.map(tx => ({
-      id:         tx.id,
-      createdAt:  tx.created_at,
-      successful: tx.successful,
-    }));
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`Horizon query failed: ${msg}`);
+  const sales = await getSalesBySeller(address, TX_LIMIT);
+  return sales.map(sale => ({
+    id: sale.tx_hash,
+    createdAt: sale.occurred_at.toISOString(),
+    successful: true,
+    sampleId: sale.sample_id.toString(),
+    amount: sale.amount.toString(),
+    tier: sale.tier,
+  }));
+}
+
+export async function getSalesByAddress(address: string, limit: number = TX_LIMIT) {
+  if (!STELLAR_ADDR_RE.test(address)) {
+    throw new Error(`Invalid Stellar address: ${address}`);
   }
+  const sales = await getSalesBySeller(address, limit);
+  return {
+    totalEarnings: (await getTotalEarnings(address)).toString(),
+    sales: sales.map(s => ({
+      txHash: s.tx_hash,
+      sampleId: s.sample_id.toString(),
+      buyer: s.buyer,
+      tier: s.tier,
+      amount: s.amount.toString(),
+      token: s.token,
+      ledger: s.ledger.toString(),
+      occurredAt: s.occurred_at.toISOString(),
+    })),
+  };
 }
 
 export async function getAccountBalance(address: string): Promise<string> {

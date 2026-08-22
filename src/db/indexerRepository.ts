@@ -1,5 +1,6 @@
 import { pool } from "./client.js";
 import { incrementSales } from "./sampleRepository.js";
+import { insertSale } from "./salesRepository.js";
 import type { DecodedEvent } from "../indexer/types.js";
 import type { Pool } from "pg";
 import { enqueueSaleDelivery } from "./webhookRepository.js";
@@ -110,6 +111,37 @@ export async function applyEventBatchAndAdvanceCursor(
              updated_at = NOW()`,
           [contractId, event.price],
         );
+        // Record the sale in the sales table for analytics queries.
+        // Looks up the seller (uploader) from the samples table so we
+        // have a proper record with buyer, seller, tier, and amount.
+        try {
+          const producer = await client.query<{ uploader: string }>(
+            "SELECT uploader FROM samples WHERE chain_id = $1",
+            [event.sampleId],
+          );
+          if (producer.rows[0]) {
+            await insertSale(
+              {
+                tx_hash: event.txHash,
+                sample_id: event.sampleId,
+                buyer: event.buyer,
+                seller: producer.rows[0].uploader,
+                tier: 0, // default tier; contract doesn't emit tier in events yet
+                amount: event.price,
+                token: "native", // default token; contract uses native XLM
+                ledger: event.ledger,
+                occurred_at: event.ledgerClosedAt,
+              },
+              client,
+            );
+          }
+        } catch (err) {
+          console.warn(
+            "[indexerRepository] failed to insert sale record — " +
+              `tx_hash=${event.txHash} buyer=${event.buyer} sample_id=${event.sampleId} price=${event.price}`,
+            err,
+          );
+        }
         // Webhook delivery is an optional migration for deployments upgrading
         // from the indexer schema. Keep sale accounting usable while that
         // migration is being applied.
