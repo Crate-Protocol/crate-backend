@@ -6,6 +6,8 @@ import {
   getSampleByChainId,
   upsertSampleMetadata,
 } from "../db/sampleRepository.js";
+import { cacheWith, etagForKey } from "../cache/cacheWith.js";
+import { invalidateSampleCache } from "../cache/invalidate.js";
 
 const router = Router();
 
@@ -41,8 +43,19 @@ router.get("/", async (req, res) => {
     return res.status(400).json({ ok: false, errors: parsed.error.issues.map((i) => i.message) });
   }
   try {
-    const { data, total } = await listSamples(parsed.data);
-    res.json({ ok: true, data, total, limit: parsed.data.limit, offset: parsed.data.offset });
+    const { genre, uploader, limit, offset } = parsed.data;
+    const cacheKey = `samples:${genre || ""}:${uploader || ""}:${limit}:${offset}`;
+
+    const result = await cacheWith(cacheKey, 30, () => listSamples(parsed.data));
+
+    // ETag support — return 304 if client already has this version
+    const etag = etagForKey(cacheKey);
+    if (req.headers["if-none-match"] === etag) {
+      return res.status(304).end();
+    }
+    res.set("ETag", etag);
+
+    res.json({ ok: true, data: result.data, total: result.total, limit, offset });
   } catch (err) {
     res.status(500).json({ ok: false, error: "Internal server error" });
   }
@@ -82,6 +95,8 @@ router.post("/metadata", async (req, res) => {
       exclusive_price: parsed.data.exclusivePrice,
       is_exclusive: parsed.data.isExclusive,
     });
+    // Invalidate sample listings so next GET reflects the upsert
+    await invalidateSampleCache();
     res.status(inserted ? 201 : 200).json({ ok: true, data: row });
   } catch (err) {
     res.status(500).json({ ok: false, error: "Internal server error" });

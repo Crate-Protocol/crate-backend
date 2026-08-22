@@ -7,6 +7,7 @@ import {
   STELLAR_ADDR_RE,
 } from "../services/stellar.js";
 import { withTimeout } from "../utils/timeout.js";
+import { cacheWith, etagForKey } from "../cache/cacheWith.js";
 
 const router = Router();
 
@@ -18,9 +19,16 @@ function sanitizedError(err: unknown): string {
   return "Internal server error";
 }
 
-router.get("/stats", async (_req, res) => {
+router.get("/stats", async (req, res) => {
   try {
-    const stats = await getStats();
+    const stats = await cacheWith("stats", 10, getStats);
+
+    const etag = etagForKey("stats");
+    if (req.headers["if-none-match"] === etag) {
+      return res.status(304).end();
+    }
+    res.set("ETag", etag);
+
     res.json({ ok: true, data: stats });
   } catch (err) {
     res.status(500).json({ ok: false, error: sanitizedError(err) });
@@ -35,10 +43,17 @@ router.get("/earnings/:address", async (req, res) => {
       .json({ ok: false, error: "Invalid Stellar address" });
   }
   try {
-    const history = await withTimeout(
-      () => getEarningsHistory(address),
-      10_000,
+    const cacheKey = `earnings:${address}`;
+    const history = await cacheWith(cacheKey, 15, () =>
+      withTimeout(() => getEarningsHistory(address), 10_000),
     );
+
+    const etag = etagForKey(cacheKey);
+    if (req.headers["if-none-match"] === etag) {
+      return res.status(304).end();
+    }
+    res.set("ETag", etag);
+
     res.json({ ok: true, data: history });
   } catch (err) {
     if (err instanceof Error && err.message === "TimeoutError") {

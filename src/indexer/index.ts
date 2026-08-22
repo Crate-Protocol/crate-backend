@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { pool } from "../db/client.js";
 import { loadConfigFromEnv, runForever } from "./worker.js";
+import { connectRedis, disconnectRedis } from "../cache/redis.js";
 
 // Standalone process — deliberately not wired into src/index.ts. Polling a
 // blockchain and holding open a long DB transaction per batch is a different
@@ -14,13 +15,15 @@ const controller = new AbortController();
 
 console.log(`[indexer] starting for contract ${config.contractId}`);
 
-runForever(config, controller.signal)
+connectRedis()
+  .then(() => runForever(config, controller.signal))
   .catch((err) => {
     console.error("[indexer] fatal error", err);
     process.exitCode = 1;
   })
-  .finally(() => {
-    pool.end().catch(() => {});
+  .finally(async () => {
+    await disconnectRedis();
+    await pool.end().catch(() => {});
   });
 
 function shutdown(signal: string) {

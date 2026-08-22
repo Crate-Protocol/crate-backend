@@ -6,6 +6,7 @@ import {
   applyEventBatchAndAdvanceCursor,
 } from "../db/indexerRepository.js";
 import { dispatchDueWebhooks } from "../services/webhookDispatcher.js";
+import { invalidateStatsCache, invalidateSampleCache } from "../cache/invalidate.js";
 
 export interface IndexerConfig {
   contractId: string;
@@ -85,6 +86,12 @@ export async function indexOnce(config: IndexerConfig): Promise<void> {
       decoded,
       to,
     );
+
+    // Invalidate caches when new events are applied
+    if (applied > 0) {
+      await invalidateStatsCache();
+      await invalidateSampleCache();
+    }
 
     console.log(
       `[indexer] ledgers ${from}-${to}: ${rawEvents.length} events fetched, ${applied} applied, ${skipped} already seen`,
