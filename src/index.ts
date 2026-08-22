@@ -15,6 +15,7 @@ import { pool, checkDbConnection } from "./db/client.js";
 import { bigIntReplacer } from "./utils/bigint.js";
 import { initWebSocket, getManager, getWss } from "./ws/server.js";
 import { startEventListener, stopEventListener } from "./ws/eventBus.js";
+import { connectRedis, disconnectRedis } from "./cache/redis.js";
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -65,6 +66,7 @@ const server = app.listen(PORT, async () => {
   console.log(`Crate API running on :${PORT}`);
   initWebSocket(server);
   console.log("[ws] WebSocket server ready on /ws");
+  await connectRedis();
   try {
     await startEventListener();
   } catch (err) {
@@ -102,6 +104,10 @@ async function gracefulShutdown(signal: string) {
   // Close the HTTP server
   await new Promise<void>((resolve) => server.close(() => resolve()));
   console.log("[shutdown] HTTP server closed.");
+
+  // Disconnect Redis
+  await disconnectRedis();
+  console.log("[shutdown] Redis disconnected.");
 
   // Drain the DB pool
   await pool.end();
