@@ -3,7 +3,20 @@ import FormData from "form-data";
 import type { Readable } from "node:stream";
 
 const PINATA_JWT        = process.env.PINATA_JWT ?? "";
-const PINATA_GATEWAY    = process.env.PINATA_GATEWAY ?? "https://gateway.pinata.cloud";
+const ALLOWED_GATEWAY_HOSTS = new Set([
+  "gateway.pinata.cloud",
+  "ipfs.io",
+  "cloudflare-ipfs.com",
+]);
+
+const PINATA_GATEWAY = (() => {
+  const raw = process.env.PINATA_GATEWAY ?? "https://gateway.pinata.cloud";
+  const { hostname } = new URL(raw);
+  if (!ALLOWED_GATEWAY_HOSTS.has(hostname)) {
+    throw new Error(`PINATA_GATEWAY hostname "${hostname}" is not in the allowlist`);
+  }
+  return raw.replace(/\/$/, "");
+})();
 const PINATA_ENDPOINT   = process.env.PINATA_ENDPOINT ?? "https://api.pinata.cloud/pinning/pinFileToIPFS";
 const PINATA_UNPIN_BASE = process.env.PINATA_UNPIN_ENDPOINT ?? "https://api.pinata.cloud/pinning/unpin";
 
