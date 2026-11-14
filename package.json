@@ -4,11 +4,11 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "dev:indexer": "tsx watch src/indexer/index.ts",
-    "start:indexer": "node dist/indexer/index.js",
+    "dev": "node init && tsx watch src/index.ts",
+    "build": "node init && tsc",
+    "start": "node init && node dist/index.js",
+    "dev:indexer": "node init && tsx watch src/indexer/index.ts",
+    "start:indexer": "node init && node dist/indexer/index.js",
     "lint": "eslint .",
     "test": "vitest run",
     "db:migrate": "node scripts/migrate.js"
